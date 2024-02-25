@@ -1,97 +1,201 @@
-import { URLSearchParams } from "node:url";
+import crypto from "node:crypto";
 
-import { Action, ActionPanel, List } from "@raycast/api";
+import {
+  Action,
+  ActionPanel,
+  Cache,
+  Icon,
+  List,
+  Toast,
+  getPreferenceValues,
+  showToast,
+} from "@raycast/api";
 import { useFetch } from "@raycast/utils";
-import { useState } from "react";
+import { createParser } from "eventsource-parser";
+import { useCallback, useEffect, useState, useTransition } from "react";
 
-export default function Command() {
-  const [searchText, setSearchText] = useState("");
-  const { data, isLoading } = useFetch(
-    "https://api.npms.io/v2/search?" +
-      // send the search query to the API
-      new URLSearchParams({
-        q: searchText.length === 0 ? "@raycast/api" : searchText,
-      }),
-    {
-      parseResponse: parseFetchResponse,
+type Prompt = {
+  id: string;
+  prompt: string;
+  answer: string;
+};
+
+const cache = new Cache({});
+
+export default function Ask() {
+  const [selectedPromptId, setSelectedPromptId] = useState<
+    string | undefined
+  >();
+  const [prompt, setPrompt] = useState<string>("");
+  const [, startTransition] = useTransition();
+
+  const [prompts, setPrompts] = useState<Prompt[]>(() =>
+    JSON.parse(cache.get("prompts") ?? "[]"),
+  );
+
+  useEffect(() => {
+    if (JSON.stringify(prompts) === cache.get("prompts")) return;
+    cache.set("prompts", JSON.stringify(prompts));
+  }, [prompts]);
+
+  const token = getPreferenceValues()?.token;
+
+  const body = new TextEncoder().encode(
+    JSON.stringify({
+      messages: [{ role: "user", content: prompt }],
+      model: "gpt-4-1106-preview",
+    }),
+  );
+
+  const updatePrompts = useCallback((id: string, next: Partial<Prompt>) => {
+    setPrompts((prev) =>
+      prev.map((x) => (x.id === id ? { ...x, ...next } : x)),
+    );
+  }, []);
+
+  const { isLoading, mutate } = useFetch("https://api.markprompt.com/chat", {
+    parseResponse: async (response) => {
+      if (!response.body) return;
+
+      const contentType = response.headers.get("content-type");
+      const tempId = crypto.randomUUID();
+
+      startTransition(() => {
+        setSelectedPromptId(tempId);
+        setPrompts((prev) => [
+          {
+            id: tempId,
+            prompt,
+            answer: "",
+          },
+          ...prev,
+        ]);
+      });
+
+      if (contentType?.startsWith("application/json")) {
+        const json = await response.json();
+
+        if ("success" in json && !json.success) {
+          return showToast({
+            title: "Ask Markprompt failed",
+            message: json.message,
+            style: Toast.Style.Failure,
+          });
+        }
+
+        return showToast({
+          title: "Ask Markprompt failed",
+          message: `An unknown error occurred, ${JSON.stringify(json)}`,
+        });
+      }
+
+      if (contentType?.startsWith("text/plain")) {
+        const message = await response.text();
+        return showToast({
+          title: "Ask Markprompt failed",
+          message: message,
+          style: Toast.Style.Failure,
+        });
+      }
+
+      const raw = response.headers.get("x-markprompt-data");
+      let data = {} as { conversationId: string; promptId: string };
+      if (raw) {
+        const str = new TextDecoder().decode(
+          new Uint8Array(raw.split(",").map(Number)),
+        );
+        data = JSON.parse(str);
+      }
+
+      startTransition(() => {
+        updatePrompts(tempId, { id: data.conversationId });
+        setSelectedPromptId(data.conversationId);
+      });
+
+      let answer = "";
+
+      const parser = createParser((event) => {
+        if (!("data" in event)) return;
+        if (event.data === "[DONE]") return;
+        const data = JSON.parse(event.data);
+        answer += data?.choices?.[0]?.delta?.content ?? "";
+      });
+
+      for await (const buf of response.body as ReadableStream<Uint8Array> & {
+        [Symbol.asyncIterator](): AsyncIterableIterator<Buffer>;
+      }) {
+        parser.feed(buf.toString("utf-8"));
+        updatePrompts(data.conversationId, { answer });
+      }
+
+      startTransition(() => {
+        updatePrompts(data.conversationId, { answer });
+        setPrompt("");
+      });
+
+      showToast({
+        title: "Ask Markprompt done",
+        style: Toast.Style.Success,
+      });
+
+      parser.reset();
     },
+    execute: false,
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "X-Markprompt-Client": "@markprompt/raycast",
+      "X-Markprompt-API-Version": "2023-12-01",
+    },
+    body: body,
+  });
+
+  const actionPanel = isLoading ? null : (
+    <ActionPanel>
+      <Action
+        title="Ask"
+        icon={Icon.SpeechBubble}
+        onAction={async () => {
+          showToast({
+            title: "Asking Markprompt…",
+            style: Toast.Style.Animated,
+          });
+          mutate();
+        }}
+      />
+    </ActionPanel>
   );
 
   return (
     <List
       isLoading={isLoading}
-      onSearchTextChange={setSearchText}
-      searchBarPlaceholder="Search npm packages..."
-      throttle
+      isShowingDetail={prompts.length > 0}
+      onSearchTextChange={setPrompt}
+      searchText={prompt}
+      navigationTitle="Ask Markprompt"
+      searchBarPlaceholder="Ask Markprompt…"
+      throttle={false}
+      filtering={false}
+      actions={actionPanel}
+      selectedItemId={selectedPromptId}
     >
-      <List.Section title="Results" subtitle={data?.length + ""}>
-        {data?.map((searchResult) => (
-          <SearchListItem key={searchResult.name} searchResult={searchResult} />
+      {prompts &&
+        prompts.length > 0 &&
+        prompts.map((x) => (
+          <List.Item
+            key={x.id}
+            id={x.id}
+            title={x.prompt.slice(0, 50)}
+            actions={actionPanel}
+            detail={
+              <List.Item.Detail
+                markdown={x.answer}
+                isLoading={x.prompt === prompt && isLoading}
+              />
+            }
+          />
         ))}
-      </List.Section>
     </List>
   );
-}
-
-function SearchListItem({ searchResult }: { searchResult: SearchResult }) {
-  return (
-    <List.Item
-      title={searchResult.name}
-      subtitle={searchResult.description}
-      accessories={[{ text: searchResult.username }]}
-      actions={
-        <ActionPanel>
-          <ActionPanel.Section>
-            <Action.OpenInBrowser
-              title="Open in Browser"
-              url={searchResult.url}
-            />
-          </ActionPanel.Section>
-          <ActionPanel.Section>
-            <Action.CopyToClipboard
-              title="Copy Install Command"
-              content={`npm install ${searchResult.name}`}
-              shortcut={{ modifiers: ["cmd"], key: "." }}
-            />
-          </ActionPanel.Section>
-        </ActionPanel>
-      }
-    />
-  );
-}
-
-/** Parse the response from the fetch query into something we can display */
-async function parseFetchResponse(response: Response) {
-  const json = (await response.json()) as
-    | {
-        results: {
-          package: {
-            name: string;
-            description?: string;
-            publisher?: { username: string };
-            links: { npm: string };
-          };
-        }[];
-      }
-    | { code: string; message: string };
-
-  if (!response.ok || "message" in json) {
-    throw new Error("message" in json ? json.message : response.statusText);
-  }
-
-  return json.results.map((result) => {
-    return {
-      name: result.package.name,
-      description: result.package.description,
-      username: result.package.publisher?.username,
-      url: result.package.links.npm,
-    } as SearchResult;
-  });
-}
-
-interface SearchResult {
-  name: string;
-  description?: string;
-  username?: string;
-  url: string;
 }
