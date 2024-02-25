@@ -1,7 +1,8 @@
-import { ActionPanel, Action, List } from "@raycast/api";
-import { useFetch, Response } from "@raycast/utils";
-import { useState } from "react";
 import { URLSearchParams } from "node:url";
+
+import { Action, ActionPanel, List } from "@raycast/api";
+import { useFetch } from "@raycast/utils";
+import { useState } from "react";
 
 export default function Command() {
   const [searchText, setSearchText] = useState("");
