@@ -14,6 +14,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: raycast/github-actions/setup-cli@v1.6.0
+        with:
+          version: v1.68.1
+          access_token: ${{ secrets.RAYCAST_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 20
