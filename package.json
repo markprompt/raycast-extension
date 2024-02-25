@@ -1,11 +1,15 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
-  "name": "markprompt-ai",
-  "title": "Markprompt AI",
-  "description": "Chat with your Markprompt project trained model",
+  "name": "markprompt",
+  "title": "Markprompt",
+  "description": "Chat with your Markprompt bot",
   "icon": "command-icon.png",
   "author": "nickrttn",
   "owner": "markprompt",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/motifland/raycast-extension.git",
+  },
   "license": "MIT",
   "commands": [
     {
