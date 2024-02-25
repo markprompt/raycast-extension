@@ -8,10 +8,12 @@ export default function Command() {
   const { data, isLoading } = useFetch(
     "https://api.npms.io/v2/search?" +
       // send the search query to the API
-      new URLSearchParams({ q: searchText.length === 0 ? "@raycast/api" : searchText }),
+      new URLSearchParams({
+        q: searchText.length === 0 ? "@raycast/api" : searchText,
+      }),
     {
       parseResponse: parseFetchResponse,
-    }
+    },
   );
 
   return (
@@ -39,7 +41,10 @@ function SearchListItem({ searchResult }: { searchResult: SearchResult }) {
       actions={
         <ActionPanel>
           <ActionPanel.Section>
-            <Action.OpenInBrowser title="Open in Browser" url={searchResult.url} />
+            <Action.OpenInBrowser
+              title="Open in Browser"
+              url={searchResult.url}
+            />
           </ActionPanel.Section>
           <ActionPanel.Section>
             <Action.CopyToClipboard
