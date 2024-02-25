@@ -20,4 +20,5 @@ jobs:
           cache: npm
       - run: corepack enable
       - run: npm ci
-      - run: npx ray lint
+      - run: npx eslint .
+      - run: npx prettier --check .
