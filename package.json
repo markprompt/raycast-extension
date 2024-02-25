@@ -5,6 +5,7 @@
   "description": "Prompt your Markprompt project from Raycast",
   "icon": "extension-icon.png",
   "author": "nickrttn",
+  "access": "public",
   "owner": "markprompt",
   "repository": {
     "type": "git",
