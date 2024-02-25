@@ -58,19 +58,6 @@ export default function Ask() {
       if (!response.body) return;
 
       const contentType = response.headers.get("content-type");
-      const tempId = crypto.randomUUID();
-
-      startTransition(() => {
-        setSelectedPromptId(tempId);
-        setPrompts((prev) => [
-          {
-            id: tempId,
-            prompt,
-            answer: "",
-          },
-          ...prev,
-        ]);
-      });
 
       if (contentType?.startsWith("application/json")) {
         const json = await response.json();
@@ -108,7 +95,7 @@ export default function Ask() {
       }
 
       startTransition(() => {
-        updatePrompts(tempId, { id: data.conversationId });
+        updatePrompts(selectedPromptId!, { id: data.conversationId });
         setSelectedPromptId(data.conversationId);
       });
 
@@ -157,11 +144,28 @@ export default function Ask() {
         title="Ask"
         icon={Icon.SpeechBubble}
         onAction={async () => {
+          if (prompt === "") return;
+
           showToast({
             title: "Asking Markprompt…",
             style: Toast.Style.Animated,
           });
-          mutate();
+
+          startTransition(() => {
+            const tempId = crypto.randomUUID();
+
+            setSelectedPromptId(tempId);
+            setPrompts((prev) => [
+              {
+                id: tempId,
+                prompt,
+                answer: "",
+              },
+              ...prev,
+            ]);
+
+            mutate();
+          });
         }}
       />
     </ActionPanel>
