@@ -4,12 +4,12 @@
   "title": "Markprompt",
   "description": "Prompt your Markprompt project from Raycast",
   "icon": "extension-icon.png",
-  "author": "nickrttn",
   "access": "public",
+  "author": "nickrttn",
   "owner": "markprompt",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/motifland/raycast-extension.git"
+    "url": "git+https://github.com/markprompt/raycast-extension.git"
   },
   "license": "MIT",
   "commands": [
