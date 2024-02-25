@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   lint:
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,6 +19,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: corepack enable
+      - run: corepack install
       - run: npm ci
       - run: npx eslint .
       - run: npx prettier --check .
