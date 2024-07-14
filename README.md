@@ -1,3 +1,7 @@
-# Markprompt AI
+# Markprompt Raycast Extension
 
-Chat with your Markprompt project trained model
+Access your Markprompt assistants from Raycast.
+
+## Installation
+
+Follow the instructions on the [Raycast store page](https://www.raycast.com/markprompt/markprompt).
