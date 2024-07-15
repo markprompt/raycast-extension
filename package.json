@@ -2,7 +2,7 @@
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "markprompt",
   "title": "Markprompt",
-  "description": "Prompt your Markprompt project from Raycast",
+  "description": "Access your Markprompt assistants from Raycast",
   "icon": "extension-icon.png",
   "access": "public",
   "author": "nickrttn",
@@ -16,7 +16,7 @@
     {
       "name": "index",
       "title": "Ask",
-      "description": "Ask your Markprompt project a question",
+      "description": "Ask a question to your assitsant",
       "mode": "view"
     }
   ],
@@ -46,7 +46,7 @@
   "preferences": [
     {
       "name": "token",
-      "description": "Get a token in the Markprompt Project settings",
+      "description": "Get a token in the Markprompt project settings",
       "type": "password",
       "required": true,
       "title": "Project Token"
